@@ -1,0 +1,24 @@
+# Official mandatory themes. Maintainers only.
+
+schema_version = 1
+
+[aviditas]
+name = "Aviditas"
+repo_url = "https://github.com/madLinux7/aviditas-madlink-theme"
+versions = [
+    { version = 1, commit = "99cc9eef26e5a4b6d4fea622356b12509efec3dc" },
+]
+
+[humilis]
+name = "Humilis"
+repo_url = "https://github.com/madLinux7/humilis-madlink-theme"
+versions = [
+    { version = 1, commit = "848bc503df7b52bbc8f52fe4600e1937382abd24" },
+]
+
+[aura]
+name = "Aura"
+repo_url = "https://github.com/madLinux7/aura-madlink-theme"
+versions = [
+    { version = 1, commit = "67af431fbe199a87d329a954572ac81ff9ace494" },
+]

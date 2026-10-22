@@ -1,0 +1,62 @@
+name: Catalog checks
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  theme-package-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Load trusted checker digest
+        run: |
+          image=$(cat checker-image.txt)
+          echo "$image" | grep -Eq '^ghcr.io/madlinux7/madlink-theme-checker@sha256:[a-f0-9]{64}$'
+          echo "CHECKER_IMAGE=$image" >> "$GITHUB_ENV"
+          docker pull "$image"
+      - name: Validate candidate data and full base history
+        env:
+          CANDIDATE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/candidates"
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --user "$(id -u):$(id -g)" --pids-limit 64 --memory 512m --cpus 1 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+            --mount "type=bind,src=$PWD,dst=/history,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/candidates,dst=/candidates" \
+            --entrypoint python3 "$CHECKER_IMAGE" /app/docker/theme-checker/catalog.py \
+            --candidate-repository "$CANDIDATE_REPOSITORY" --candidate-commit "$CANDIDATE_SHA" \
+            --base-repository /history --base-commit "$BASE_SHA" --output /candidates
+      - name: Isolated source and browser checks
+        run: |
+          count=$(jq 'length' "$RUNNER_TEMP/candidates/checks.json")
+          for ((i=0; i<count; i++)); do
+            entry=$(jq -c ".[$i]" "$RUNNER_TEMP/candidates/checks.json")
+            mkdir -p "$RUNNER_TEMP/reports/$i"
+            docker run --init --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+              --user "$(id -u):$(id -g)" --pids-limit 128 --memory 768m --cpus 1 \
+              --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+              --tmpfs /app/storage:rw,nosuid,nodev,size=64m,mode=1777 \
+              --tmpfs /app/bootstrap/cache:rw,nosuid,nodev,size=16m,mode=1777 \
+              --mount "type=bind,src=$RUNNER_TEMP/candidates/$i.tar.gz,dst=/candidate.tar.gz,readonly" \
+              --mount "type=bind,src=$RUNNER_TEMP/reports/$i,dst=/report" \
+              "$CHECKER_IMAGE" /candidate.tar.gz "$(jq -r .slug <<< "$entry")" \
+              --package-version="$(jq -r .version <<< "$entry")" --commit="$(jq -r .commit <<< "$entry")" \
+              --repository="$(jq -r .repository_url <<< "$entry")" --sha256="$(jq -r .archive_sha256 <<< "$entry")" --output=/report
+            jq -e --argjson expected "$(jq .files <<< "$entry")" '.git_files == $expected' "$RUNNER_TEMP/reports/$i/report.json"
+          done
+      - name: Preserve review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: commit-review-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/reports/
+          retention-days: 14
