@@ -2,3 +2,8 @@
 
 schema_version = 1
 
+
+[catalog-acceptance]
+name = "Catalog acceptance"
+repo_url = "https://github.com/madLinux7/humilis-madlink-theme"
+versions = [{ version = 1, commit = "96f0290cf470e2aaaac2010eca267f9d656ec411" }]
