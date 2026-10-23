@@ -1,1 +1,1 @@
-ghcr.io/madlinux7/madlink-theme-checker@sha256:1498981fca66c3baa9c68a264aa42b56ec8ba91793efff12ba7fc625eb49dde9
+ghcr.io/madlinux7/madlink-theme-checker@sha256:2b87b03276575b22b06b774023bab1c5b88556fb0f1f56812200315690f9d994

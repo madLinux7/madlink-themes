@@ -14,6 +14,25 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Allow only community.toml changes
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
+          test "$(git rev-parse FETCH_HEAD)" = "$CANDIDATE_SHA"
+          git diff --no-ext-diff --no-renames --name-only -z "$BASE_SHA...$CANDIDATE_SHA" > "$RUNNER_TEMP/changed-files"
+          python3 - "$RUNNER_TEMP/changed-files" <<'PY'
+          import pathlib
+          import sys
+          paths = pathlib.Path(sys.argv[1]).read_bytes().split(b'\0')
+          if paths != [b'community.toml', b'']:
+              sys.exit('Only community.toml may be changed in a catalog PR.')
+          PY
       - name: Load trusted checker digest
         run: |
           image=$(cat checker-image.txt)
