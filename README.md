@@ -30,3 +30,5 @@ Maintainers document source and browser acceptance directly on the PR for the ex
 ## Publication status
 
 The TOML transition is prepared locally. `checker-image.txt` pins the tested TOML checker by its verified public registry digest. The image revision matches Core commit `8c9dfc45f74a042bb979dbb84db34fa97e88ef16`. New theme commits must also be pushed before online checks can pass. Step 15 stays open until real PR, branch-protection and commit-download acceptance is recorded in the Core release checklist.
+# Negative CI smoke test: this README change must be rejected. Do not merge.
+
